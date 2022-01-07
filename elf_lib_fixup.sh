@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# if [ $# -lt 3 ]; then
-#     echo "Usage: $0 <elf> <.deb> <output_elf>"
-#     echo ""
-#     exit 1
-# fi
-# ORIGINAL_DIR=$(pwd)
+if [ $# -lt 2 ]; then
+    echo "Usage: $0 <elf> <.deb>"
+    echo ""
+    exit 1
+fi
+ORIGINAL_DIR=$(pwd)
 
 # extract data.tar.xz
 ar x "$2" data.tar.xz
@@ -47,5 +47,9 @@ cp "$LINKER" "$LINKER_NAME"
 cp "$1" "$1.patched"
 
 patchelf --set-interpreter "$LINKER_NAME" "$1.patched"
-
 rm -rf ./lib
+
+echo ""
+echo "created $1.patched"
+echo "run with:"
+echo "LD_LIBRARY_PATH=. ./$1.patched"
