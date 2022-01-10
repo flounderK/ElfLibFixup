@@ -41,9 +41,9 @@ for i in "${NEEDED_LIBS[@]}"; do
 
 done
 
-LINKER_NAME=$(basename $(readelf -lW "$1" | grep --color=never -Po '(?<=\[Requesting program interpreter: )[^\]]+(?=\])'))
-LINKER=$(find ./lib -type l,f -iname $LINKER_NAME)
-cp "$LINKER" "$LINKER_NAME"
+LINKER_NAME=$(basename $(readelf -lW "$1" | grep --color=never -Po '(?<=\[Requesting program interpreter: )[^\]]+(?=\])' | tr '\n' '\0'))
+LINKER=$(find ./lib -type l,f -iname $LINKER_NAME -o -iname 'ld*so*' | xargs -I{} sh -c 'cp {} .')
+# cp "$LINKER" "$LINKER_NAME"
 cp "$1" "$1.patched"
 
 patchelf --set-interpreter "$LINKER_NAME" "$1.patched"
