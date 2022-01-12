@@ -28,16 +28,14 @@ for i in "${NEEDED_LIBS[@]}"; do
 	readarray -d '' FILES < <(find ./$LIB_DIR -type f -iname $i -print0)
 	readarray -d '' LINKS < <(find ./$LIB_DIR -type l -iname $i -print0)
 	for k in "${LINKS[@]}"; do
-		echo "$k"
+		# echo "$k"
 		cp --preserve=links "$k" .
 		link_name=$(readlink -f -n $k)
 		# echo "$link_name"
 		FILES+=($link_name)
 	done
 
-	for k in "${FILES[@]}"; do
-		echo "$k"
-	done
+	# for k in "${FILES[@]}"; do echo "$k"; done
 
 	if [ ${#FILES[@]} -ge 1 ]; then
 		cp --preserve=links ${FILES[0]} .
@@ -45,12 +43,27 @@ for i in "${NEEDED_LIBS[@]}"; do
 
 done
 
-LINKER_NAME=$(basename $(readelf -lW "$1" | grep --color=never -Po '(?<=\[Requesting program interpreter: )[^\]]+(?=\])' | tr '\n' '\0'))
-LINKER=$(find ./$LIB_DIR -type l,f -iname $LINKER_NAME -o -iname 'ld*so*' | xargs -I{} sh -c 'cp {} .')
-# cp "$LINKER" "$LINKER_NAME"
+LINKER_NAME=$(basename $(readelf -lW "$1" | grep --color=never -Po '(?<=\[Requesting program interpreter: )[^\]]+(?=\])'))
+
+echo "expecting linker $LINKER_NAME"
+
+readarray -d '' POSSIBLE_LINKERS < <(find ./$LIB_DIR -type l,f -iname $LINKER_NAME -o -iname 'ld*so*' -print0)
+for i in "${POSSIBLE_LINKERS[@]}"; do
+	echo "linker candidate $i"
+	cp $i .
+done
+
+# make the new file that will be modified
 cp "$1" "$1.patched"
 
+# if the expected linker isn't present, use whatever was found
+if [ ! -f "$LINKER_NAME" ]; then
+	echo "Couldn't find expected linker, using first available"
+	cp "${POSSIBLE_LINKERS[0]}" "$LINKER_NAME"
+fi
+
 patchelf --set-interpreter "$LINKER_NAME" "$1.patched"
+
 rm -rf ./$LIB_DIR
 
 echo ""
